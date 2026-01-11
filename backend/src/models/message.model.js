@@ -12,16 +12,31 @@ const messageSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+
+    // text message
     text: {
       type: String,
+      default: "",
     },
+
+    // image message
     image: {
       type: String,
+      default: "",
+    },
+
+    // 🎤 voice message
+    audio: {
+      type: String, // URL to audio file
+      default: "",
+    },
+
+    audioDuration: {
+      type: Number, // seconds
     },
   },
   { timestamps: true }
 );
 
 const Message = mongoose.model("Message", messageSchema);
-
 export default Message;

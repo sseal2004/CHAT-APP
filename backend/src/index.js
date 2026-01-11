@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import { connectDB } from "./lib/db.js";
 import authRoutes from "./routes/auth.route.js";
 import cookieParser from "cookie-parser"
+import messageRoutes from "./routes/message.route.js"
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(cookieParser())
 
 // routes
 app.use("/api/auth", authRoutes);
+app.use("/api/message", messageRoutes);
 
 // start server AFTER DB connection
 const startServer = async () => {
