@@ -1,5 +1,5 @@
 # Real Time Chatting App
-A Real Time AI Chatting App
+<br>
 Login & SignUp page
 <img width="1915" height="906" alt="image" src="https://github.com/user-attachments/assets/8532fa88-8ec2-4d8d-8c6a-08c21caf7fbd" />
 Chatting Window
