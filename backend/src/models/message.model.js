@@ -34,6 +34,11 @@ const messageSchema = new mongoose.Schema(
     audioDuration: {
       type: Number, // seconds
     },
+    seen: {
+    type: Boolean,
+    default: false,
+    },
+
   },
   { timestamps: true }
 );

@@ -21,12 +21,30 @@ export const getMessages = async (req, res) => {
     const { id: userToChatId } = req.params;
     const myId = req.user._id;
 
+    // ✅ Mark messages as seen
+    await Message.updateMany(
+      {
+        senderId: userToChatId,
+        receiverId: myId,
+        seen: { $ne: true },
+      },
+      { $set: { seen: true } }
+    );
+
     const messages = await Message.find({
       $or: [
         { senderId: myId, receiverId: userToChatId },
         { senderId: userToChatId, receiverId: myId },
       ],
     });
+
+    // ✅ Notify sender that messages were seen
+    const senderSocketId = getReceiverSocketId(userToChatId);
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("messagesSeen", {
+        from: myId,
+      });
+    }
 
     res.status(200).json(messages);
   } catch (error) {

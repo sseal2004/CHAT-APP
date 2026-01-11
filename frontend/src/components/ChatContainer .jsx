@@ -50,69 +50,101 @@ const ChatContainer = () => {
       <ChatHeader />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div
-            key={message._id}
-            className={`chat ${
-              message.senderId === authUser._id ? "chat-end" : "chat-start"
-            }`}
-            ref={messageEndRef}
-          >
-            <div className="chat-image avatar">
-              <div className="size-10 rounded-full border">
-                <img
-                  src={
-                    message.senderId === authUser._id
-                      ? authUser.profilePic || "/avatar.png"
-                      : selectedUser.profilePic || "/avatar.png"
-                  }
-                  alt="profile pic"
-                />
+        {messages.map((message) => {
+          const isMyMessage = message.senderId === authUser._id;
+
+          return (
+            <div
+              key={message._id}
+              className={`chat ${isMyMessage ? "chat-end" : "chat-start"}`}
+              ref={messageEndRef}
+            >
+              <div className="chat-image avatar">
+                <div className="size-10 rounded-full border">
+                  <img
+                    src={
+                      isMyMessage
+                        ? authUser.profilePic || "/avatar.png"
+                        : selectedUser.profilePic || "/avatar.png"
+                    }
+                    alt="profile pic"
+                  />
+                </div>
+              </div>
+
+              <div className="chat-header mb-1 flex items-center gap-2">
+                <time className="text-xs opacity-50 ml-1">
+                  {formatMessageTime(message.createdAt)}
+                </time>
+
+                {/* ✅ TICK STATUS (ONLY FOR MY MESSAGES) */}
+                {isMyMessage && (
+                  <span
+                    className={`text-xs ${
+                      message.seen ? "text-blue-500" : "text-gray-400"
+                    }`}
+                    title={message.seen ? "Seen" : "Delivered"}
+                  >
+<span className="flex items-center gap-[1px] text-xs select-none">
+  {/* First Tick */}
+  <span
+    className={`leading-none ${
+      message.seen ? "text-blue-500" : "text-gray-400"
+    }`}
+  >
+    ✓
+  </span>
+
+  {/* Second Tick */}
+  <span
+    className={`leading-none ${
+      message.seen ? "text-blue-500" : "text-transparent"
+    }`}
+  >
+    ✓
+  </span>
+</span>
+                  </span>
+                )}
+              </div>
+
+              <div className="chat-bubble flex flex-col">
+                {message.image && (
+                  <img
+                    src={message.image}
+                    alt="Attachment"
+                    className="sm:max-w-[200px] rounded-md mb-2"
+                  />
+                )}
+
+                {/* ✅ AUDIO WITH FAIL HANDLING */}
+                {message.audio && (
+                  <>
+                    {!failedAudio[message._id] ? (
+                      <audio
+                        controls
+                        src={message.audio}
+                        className="max-w-xs mb-2"
+                        onError={() =>
+                          setFailedAudio((prev) => ({
+                            ...prev,
+                            [message._id]: true,
+                          }))
+                        }
+                      />
+                    ) : (
+                      <p className="text-sm text-red-500 italic mb-2">
+                        Failed to send voice message
+                      </p>
+                    )}
+                  </>
+                )}
+
+                {message.text && <p>{message.text}</p>}
               </div>
             </div>
-
-            <div className="chat-header mb-1">
-              <time className="text-xs opacity-50 ml-1">
-                {formatMessageTime(message.createdAt)}
-              </time>
-            </div>
-
-            <div className="chat-bubble flex flex-col">
-              {message.image && (
-                <img
-                  src={message.image}
-                  alt="Attachment"
-                  className="sm:max-w-[200px] rounded-md mb-2"
-                />
-              )}
-
-              {/* ✅ AUDIO WITH FAIL HANDLING */}
-              {message.audio && (
-                <>
-                  {!failedAudio[message._id] ? (
-                    <audio
-                      controls
-                      src={message.audio}
-                      className="max-w-xs mb-2"
-                      onError={() =>
-                        setFailedAudio((prev) => ({
-                          ...prev,
-                          [message._id]: true,
-                        }))
-                      }
-                    />
-                  ) : (
-                    <p className="text-sm text-red-500 italic mb-2">
-                      Failed to send voice message
-                    </p>
-                  )}
-                </>
-              )}
-
-              {message.text && <p>{message.text}</p>}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <MessageInput />
