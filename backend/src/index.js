@@ -1,34 +1,69 @@
 import express from "express";
 import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+import path from "path";
+
 import { connectDB } from "./lib/db.js";
 import authRoutes from "./routes/auth.route.js";
-import cookieParser from "cookie-parser"
-import messageRoutes from "./routes/message.route.js"
+import messageRoutes from "./routes/message.route.js";
+import { app, server } from "./lib/socket.js";
 
 dotenv.config();
 
-const app = express();
 const PORT = process.env.PORT || 5001;
+const __dirname = path.resolve();
 
-// middleware
-app.use(express.json());
-app.use(cookieParser())
+/* -------------------- ALLOWED ORIGINS -------------------- */
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:5175",
+  "http://localhost:5176",
+  "http://localhost:5177",
+  "http://127.0.0.1:5173",
+  "http://localhost:3000",
+];
 
-// routes
+/* -------------------- MIDDLEWARE -------------------- */
+app.use(express.json({ limit: "10mb" })); // allow up to 10 MB JSON payloads
+app.use(express.urlencoded({ limit: "10mb", extended: true })); // for form data
+app.use(cookieParser());
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (Postman, mobile apps)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.error("❌ Blocked by CORS:", origin);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
+
+/* -------------------- ROUTES -------------------- */
 app.use("/api/auth", authRoutes);
-app.use("/api/message", messageRoutes);
+app.use("/api/messages", messageRoutes);
 
-// start server AFTER DB connection
-const startServer = async () => {
-  try {
-    await connectDB();
-    app.listen(PORT, () => {
-      console.log(`Server is running on port: ${PORT}`);
-    });
-  } catch (error) {
-    console.error("Failed to start server:", error.message);
-    process.exit(1);
-  }
-};
+/* -------------------- PRODUCTION -------------------- */
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
-startServer();
+  app.get("*", (req, res) => {
+    res.sendFile(
+      path.join(__dirname, "../frontend", "dist", "index.html")
+    );
+  });
+}
+
+/* -------------------- START SERVER -------------------- */
+server.listen(PORT, () => {
+  console.log(`✅ Server running on PORT: ${PORT}`);
+  connectDB();
+});

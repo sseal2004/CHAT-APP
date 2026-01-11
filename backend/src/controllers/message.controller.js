@@ -40,19 +40,22 @@ export const sendMessage = async (req, res) => {
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
-    let imageUrl;
-    let audioUrl;
+    let imageUrl = null;
+    let audioUrl = null;
 
-    // image upload
-    if (image) {
-      const uploadResponse = await cloudinary.uploader.upload(image);
+    // 🖼️ Image upload (Base64)
+    if (typeof image === "string" && image.startsWith("data:")) {
+      const uploadResponse = await cloudinary.uploader.upload(image, {
+        folder: "chat-images",
+      });
       imageUrl = uploadResponse.secure_url;
     }
 
-    // 🎤 voice upload
-    if (audio) {
+    // 🎤 Audio upload (Base64)
+    if (typeof audio === "string" && audio.startsWith("data:")) {
       const uploadResponse = await cloudinary.uploader.upload(audio, {
-        resource_type: "video", // REQUIRED for audio
+        resource_type: "video", // required for audio
+        folder: "chat-audio",
       });
       audioUrl = uploadResponse.secure_url;
     }
@@ -74,7 +77,7 @@ export const sendMessage = async (req, res) => {
       io.to(receiverSocketId).emit("newMessage", newMessage);
     }
 
-    // 🔥 ALSO send back to sender (for instant UI update)
+    // 🔥 send back to sender
     const senderSocketId = getReceiverSocketId(senderId);
     if (senderSocketId) {
       io.to(senderSocketId).emit("newMessage", newMessage);
