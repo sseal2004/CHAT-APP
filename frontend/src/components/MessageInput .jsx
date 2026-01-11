@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
-import { Image, Send, X, Mic, Square } from "lucide-react";
+import { Image, Send, X, Mic, Square, Smile } from "lucide-react";
 import toast from "react-hot-toast";
 
 const MessageInput = () => {
@@ -8,6 +8,10 @@ const MessageInput = () => {
   const [imagePreview, setImagePreview] = useState(null);
   const [audioPreview, setAudioPreview] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
+
+  // ✅ Emoji states
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const emojis = ["😀", "😂", "😍", "😎", "👍", "🔥", "❤️", "🎉", "🙏", "😢"];
 
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -88,6 +92,12 @@ const MessageInput = () => {
     setAudioPreview(null);
   };
 
+  /* ---------------- EMOJI ---------------- */
+  const addEmoji = (emoji) => {
+    setText((prev) => prev + emoji);
+    setShowEmojiPicker(false);
+  };
+
   /* ---------------- SEND MESSAGE ---------------- */
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -104,7 +114,7 @@ const MessageInput = () => {
       await sendMessage({
         text: text.trim(),
         image: imagePreview,
-        audio: audioBase64, // ✅ send base64 instead of Blob
+        audio: audioBase64,
       });
 
       setText("");
@@ -154,14 +164,47 @@ const MessageInput = () => {
       )}
 
       <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-        <div className="flex-1 flex gap-2">
-          <input
-            type="text"
-            className="w-full input input-bordered rounded-lg input-sm sm:input-md"
-            placeholder="Type a message..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
+        <div className="flex-1 flex gap-2 relative">
+          {/* INPUT WITH EMOJI */}
+          <div className="relative w-full">
+            <input
+              type="text"
+             className="w-full input input-bordered rounded-lg h-10 sm:h-12 pr-12 sm:pr-10" 
+
+
+              placeholder="Type a message..."
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
+
+            {/* EMOJI BUTTON INSIDE INPUT */}
+            <button
+              type="button"
+              onClick={() => setShowEmojiPicker((prev) => !prev)}
+             className="hidden sm:block absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 
+text-zinc-400 hover:text-primary p-1 sm:p-0 "
+
+
+            >
+              <Smile size={20} />
+            </button>
+
+            {/* EMOJI PICKER */}
+            {showEmojiPicker && (
+              <div className="absolute bottom-12 right-0 bg-base-200 shadow-lg rounded-lg p-2 grid grid-cols-5 gap-2 z-50">
+                {emojis.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    className="text-xl hover:scale-110 transition"
+                    onClick={() => addEmoji(emoji)}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <input
             type="file"
@@ -174,7 +217,7 @@ const MessageInput = () => {
           {/* IMAGE BUTTON */}
           <button
             type="button"
-            className={`hidden sm:flex btn btn-circle
+            className={`flex sm:flex btn btn-circle
               ${imagePreview ? "text-emerald-500" : "text-zinc-400"}`}
             onClick={() => fileInputRef.current?.click()}
           >
