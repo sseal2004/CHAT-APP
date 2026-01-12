@@ -19,58 +19,42 @@ const ChatContainer = () => {
 
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
-
-  // ✅ Track failed audio messages
   const [failedAudio, setFailedAudio] = useState({});
 
   useEffect(() => {
+    if (!selectedUser?._id) return;
+
     getMessages(selectedUser._id);
     subscribeToMessages();
-    return () => unsubscribeFromMessages();
-  }, [selectedUser._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
 
+    return () => unsubscribeFromMessages();
+  }, [selectedUser?._id]);
+
+  // ✅ Reliable auto-scroll (FIXED)
   useEffect(() => {
-    if (messageEndRef.current && messages) {
-      messageEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ✅ Format date as "Today", "Yesterday", or full date
   const getDateLabel = (date) => {
     const messageDate = new Date(date);
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
 
-    if (
-      messageDate.getDate() === today.getDate() &&
-      messageDate.getMonth() === today.getMonth() &&
-      messageDate.getFullYear() === today.getFullYear()
-    ) {
-      return "Today";
-    } else if (
-      messageDate.getDate() === yesterday.getDate() &&
-      messageDate.getMonth() === yesterday.getMonth() &&
-      messageDate.getFullYear() === yesterday.getFullYear()
-    ) {
+    if (messageDate.toDateString() === today.toDateString()) return "Today";
+    if (messageDate.toDateString() === yesterday.toDateString())
       return "Yesterday";
-    } else {
-      return messageDate.toLocaleDateString();
-    }
+
+    return messageDate.toLocaleDateString();
   };
 
-  // ✅ Generate messages with date separators
   const renderMessages = () => {
     let lastMessageDate = null;
 
     return messages.map((message) => {
       const messageDate = new Date(message.createdAt).toDateString();
-      let showDateSeparator = false;
-
-      if (lastMessageDate !== messageDate) {
-        showDateSeparator = true;
-        lastMessageDate = messageDate;
-      }
+      const showDateSeparator = lastMessageDate !== messageDate;
+      lastMessageDate = messageDate;
 
       const isMyMessage = message.senderId === authUser._id;
 
@@ -84,10 +68,7 @@ const ChatContainer = () => {
             </div>
           )}
 
-          <div
-            className={`chat ${isMyMessage ? "chat-end" : "chat-start"}`}
-            ref={messageEndRef}
-          >
+          <div className={`chat ${isMyMessage ? "chat-end" : "chat-start"}`}>
             <div className="chat-image avatar">
               <div className="size-10 rounded-full border">
                 <img
@@ -96,17 +77,17 @@ const ChatContainer = () => {
                       ? authUser.profilePic || "/avatar.png"
                       : selectedUser.profilePic || "/avatar.png"
                   }
-                  alt="profile pic"
+                  alt="profile"
                 />
               </div>
             </div>
 
             <div className="chat-header mb-1 flex items-center gap-2">
-              <time className="text-xs opacity-50 ml-1">
+              <time className="text-xs opacity-50">
                 {formatMessageTime(message.createdAt)}
               </time>
 
-              {/* ✅ TICK STATUS (ONLY FOR MY MESSAGES) */}
+              {/* ✅ PERFECT REAL-TIME TICK LOGIC */}
               {isMyMessage && (
                 <span
                   className={`text-xs ${
@@ -114,25 +95,7 @@ const ChatContainer = () => {
                   }`}
                   title={message.seen ? "Seen" : "Delivered"}
                 >
-                  <span className="flex items-center gap-[1px] text-xs select-none">
-                    {/* First Tick */}
-                    <span
-                      className={`leading-none ${
-                        message.seen ? "text-blue-500" : "text-gray-400"
-                      }`}
-                    >
-                      ✓
-                    </span>
-
-                    {/* Second Tick */}
-                    <span
-                      className={`leading-none ${
-                        message.seen ? "text-blue-500" : "text-transparent"
-                      }`}
-                    >
-                      ✓
-                    </span>
-                  </span>
+                  {message.seen ? "✓✓" : "✓"}
                 </span>
               )}
             </div>
@@ -146,7 +109,6 @@ const ChatContainer = () => {
                 />
               )}
 
-              {/* ✅ AUDIO WITH FAIL HANDLING */}
               {message.audio && (
                 <>
                   {!failedAudio[message._id] ? (
@@ -190,9 +152,11 @@ const ChatContainer = () => {
   return (
     <div className="flex-1 flex flex-col overflow-auto">
       <ChatHeader />
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">{renderMessages()}</div>
-
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {renderMessages()}
+        {/* ✅ SCROLL ANCHOR */}
+        <div ref={messageEndRef} />
+      </div>
       <MessageInput />
     </div>
   );
