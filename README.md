@@ -1,5 +1,7 @@
 # Real Time Chatting App
 <br>
+Real Time Chatting With AI
+<img width="1914" height="909" alt="image" src="https://github.com/user-attachments/assets/883658ef-5009-4952-a776-279b9339d57d" />
 Login & SignUp page
 <img width="1915" height="906" alt="image" src="https://github.com/user-attachments/assets/8532fa88-8ec2-4d8d-8c6a-08c21caf7fbd" />
 Chatting Window
