@@ -17,22 +17,27 @@ const MessageInput = () => {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
-  const { sendMessage } = useChatStore();
+  // ✅ FIXED: removed setAITyping (it doesn't exist in store)
+  const { sendMessage, selectedUser } = useChatStore();
 
   /* ---------------- IMAGE ---------------- */
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
-      return;
-    }
+  const file = e.target.files?.[0];
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result);
-    };
-    reader.readAsDataURL(file);
+  if (!file) return; // ✅ user cancelled file picker
+
+  if (!file.type.startsWith("image/")) {
+    toast.error("Please select an image file");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onloadend = () => {
+    setImagePreview(reader.result);
   };
+  reader.readAsDataURL(file);
+};
+
 
   const removeImage = () => {
     setImagePreview(null);
@@ -40,8 +45,6 @@ const MessageInput = () => {
   };
 
   /* ---------------- AUDIO ---------------- */
-
-  // ✅ Convert Blob → Base64
   const convertBlobToBase64 = (blob) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -68,7 +71,6 @@ const MessageInput = () => {
         });
         const audioUrl = URL.createObjectURL(audioBlob);
 
-        // ✅ Store blob + preview URL
         setAudioPreview({
           blob: audioBlob,
           url: audioUrl,
@@ -106,7 +108,6 @@ const MessageInput = () => {
     try {
       let audioBase64 = null;
 
-      // ✅ Convert audio blob → base64 before sending
       if (audioPreview?.blob) {
         audioBase64 = await convertBlobToBase64(audioPreview.blob);
       }
@@ -165,31 +166,24 @@ const MessageInput = () => {
 
       <form onSubmit={handleSendMessage} className="flex items-center gap-2">
         <div className="flex-1 flex gap-2 relative">
-          {/* INPUT WITH EMOJI */}
           <div className="relative w-full">
             <input
               type="text"
-             className="w-full input input-bordered rounded-lg h-10 sm:h-12 pr-12 sm:pr-10" 
-
-
+              className="w-full input input-bordered rounded-lg h-10 sm:h-12 pr-12 sm:pr-10"
               placeholder="Type a message..."
               value={text}
               onChange={(e) => setText(e.target.value)}
             />
 
-            {/* EMOJI BUTTON INSIDE INPUT */}
             <button
               type="button"
               onClick={() => setShowEmojiPicker((prev) => !prev)}
-             className="hidden sm:block absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 
-text-zinc-400 hover:text-primary p-1 sm:p-0 "
-
-
+              className="hidden sm:block absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 
+              text-zinc-400 hover:text-primary p-1 sm:p-0"
             >
               <Smile size={20} />
             </button>
 
-            {/* EMOJI PICKER */}
             {showEmojiPicker && (
               <div className="absolute bottom-12 right-0 bg-base-200 shadow-lg rounded-lg p-2 grid grid-cols-5 gap-2 z-50">
                 {emojis.map((emoji) => (
@@ -214,7 +208,6 @@ text-zinc-400 hover:text-primary p-1 sm:p-0 "
             onChange={handleImageChange}
           />
 
-          {/* IMAGE BUTTON */}
           <button
             type="button"
             className={`flex sm:flex btn btn-circle
@@ -224,7 +217,6 @@ text-zinc-400 hover:text-primary p-1 sm:p-0 "
             <Image size={20} />
           </button>
 
-          {/* VOICE BUTTON */}
           <button
             type="button"
             className={`btn btn-circle ${

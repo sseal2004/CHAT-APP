@@ -3,6 +3,7 @@ import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton ";
 import { Users } from "lucide-react";
+import { AI_USER } from "../constants/aiUser";
 
 const Sidebar = () => {
   const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading } =
@@ -16,12 +17,12 @@ const Sidebar = () => {
     getUsers();
   }, [getUsers]);
 
-  const filteredUsers = users
+  const filteredUsers = [AI_USER, ...users]
     .filter((user) =>
       user.fullName.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .filter((user) =>
-      showOnlineOnly ? onlineUsers.includes(user._id) : true
+      showOnlineOnly ? onlineUsers.includes(user._id) || user.isAI : true
     );
 
   if (isUsersLoading) return <SidebarSkeleton />;
@@ -38,42 +39,39 @@ const Sidebar = () => {
           <Users className="size-5" />
           <span className="font-semibold text-lg">Contacts</span>
         </div>
-<div className="relative mt-3">
-  {/* Search Icon */}
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={2}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 18a7.5 7.5 0 006.15-3.35z"
-    />
-  </svg>
 
-  {/* Input */}
-  <input
-    type="text"
-    placeholder="Search User..."
-    value={searchTerm}
-    onChange={(e) => setSearchTerm(e.target.value)}
-    className="
-      input input-sm w-full
-      pl-9
-      font-semibold
-      border-2 border-primary/60
-      focus:border-primary
-      focus:outline-none
-      focus:ring-0
-    "
-  />
-</div>
+        <div className="relative mt-3">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 18a7.5 7.5 0 006.15-3.35z"
+            />
+          </svg>
 
-
+          <input
+            type="text"
+            placeholder="Search User..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="
+              input input-sm w-full
+              pl-9
+              font-semibold
+              border-2 border-primary/60
+              focus:border-primary
+              focus:outline-none
+              focus:ring-0
+            "
+          />
+        </div>
 
         <div className="mt-2 flex items-center gap-2">
           <label className="cursor-pointer flex items-center gap-2">
@@ -105,11 +103,15 @@ const Sidebar = () => {
           >
             <div className="relative">
               <img
-                src={user.profilePic || "/avatar.png"}
-                alt={user.name}
+                src={
+                  user.isAI
+                    ? "https://cdn-icons-png.flaticon.com/512/4712/4712109.png"
+                    : user.profilePic || "/frontend/public/avatar.png"
+                }
+                alt={user.fullName}
                 className="size-11 object-cover rounded-full"
               />
-              {onlineUsers.includes(user._id) && (
+              {(onlineUsers.includes(user._id) || user.isAI) && (
                 <span
                   className="absolute bottom-0 right-0 size-3 bg-green-500
                   rounded-full ring-2 ring-zinc-900"
@@ -117,25 +119,26 @@ const Sidebar = () => {
               )}
             </div>
 
+            {/* TEXT AREA */}
             <div className="text-left min-w-0">
-              <div
-                className="
-                  font-semibold truncate
-                  text-base sm:text-[15px]
-                  leading-tight
-                "
-              >
-                {user.fullName}
+              <div className="flex items-center gap-2">
+                <span className="font-semibold truncate">
+                  {user.fullName}
+                </span>
+
+                {user.isAI && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary font-semibold">
+                    AI
+                  </span>
+                )}
               </div>
 
-              <div
-                className="
-                  text-sm sm:text-[13px]
-                  text-zinc-400
-                  mt-0.5
-                "
-              >
-                {onlineUsers.includes(user._id) ? "Online" : "Offline"}
+              <div className="text-sm sm:text-[13px] text-zinc-400 mt-0.5">
+                {user.isAI
+                  ? "AI Assistant"
+                  : onlineUsers.includes(user._id)
+                  ? "Online"
+                  : "Offline"}
               </div>
             </div>
           </button>

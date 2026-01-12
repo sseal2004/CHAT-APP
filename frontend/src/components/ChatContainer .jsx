@@ -10,12 +10,16 @@ import { formatMessageTime } from "../lib/utils";
 const ChatContainer = () => {
   const {
     messages,
+    aiMessages,
     getMessages,
     isMessagesLoading,
     selectedUser,
     subscribeToMessages,
     unsubscribeFromMessages,
   } = useChatStore();
+
+  // ✅ FINAL SOURCE SWITCH
+  const chatMessages = selectedUser?.isAI ? aiMessages : messages;
 
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
@@ -30,10 +34,10 @@ const ChatContainer = () => {
     return () => unsubscribeFromMessages();
   }, [selectedUser?._id]);
 
-  // ✅ Reliable auto-scroll (FIXED)
+  // ✅ FIXED AUTO-SCROLL (AI + USER)
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [chatMessages]);
 
   const getDateLabel = (date) => {
     const messageDate = new Date(date);
@@ -51,12 +55,14 @@ const ChatContainer = () => {
   const renderMessages = () => {
     let lastMessageDate = null;
 
-    return messages.map((message) => {
+    return chatMessages.map((message) => {
       const messageDate = new Date(message.createdAt).toDateString();
       const showDateSeparator = lastMessageDate !== messageDate;
       lastMessageDate = messageDate;
 
-      const isMyMessage = message.senderId === authUser._id;
+      const isMyMessage = selectedUser?.isAI
+        ? message.role === "user" // AI chat logic
+        : message.senderId === authUser._id; // Normal chat logic
 
       return (
         <div key={message._id}>
@@ -75,6 +81,8 @@ const ChatContainer = () => {
                   src={
                     isMyMessage
                       ? authUser.profilePic || "/avatar.png"
+                      : selectedUser?.isAI
+                      ? "https://cdn-icons-png.flaticon.com/512/4712/4712109.png" // ✅ AI avatar applied here
                       : selectedUser.profilePic || "/avatar.png"
                   }
                   alt="profile"
@@ -87,8 +95,8 @@ const ChatContainer = () => {
                 {formatMessageTime(message.createdAt)}
               </time>
 
-              {/* ✅ PERFECT REAL-TIME TICK LOGIC */}
-              {isMyMessage && (
+              {/* ✅ TICKS ONLY FOR REAL USERS */}
+              {!selectedUser?.isAI && isMyMessage && (
                 <span
                   className={`text-xs ${
                     message.seen ? "text-blue-500" : "text-gray-400"
@@ -143,7 +151,7 @@ const ChatContainer = () => {
     return (
       <div className="flex-1 flex flex-col overflow-auto">
         <ChatHeader />
-        <MessageSkeleton />
+        <MessageSkeleton isAI={selectedUser?.isAI} />
         <MessageInput />
       </div>
     );
@@ -154,7 +162,6 @@ const ChatContainer = () => {
       <ChatHeader />
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {renderMessages()}
-        {/* ✅ SCROLL ANCHOR */}
         <div ref={messageEndRef} />
       </div>
       <MessageInput />

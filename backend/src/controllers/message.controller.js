@@ -4,6 +4,9 @@ import Message from "../models/message.model.js";
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 
+// ✅ ADD THIS IMPORT (your AI service / util)
+import { generateAIResponse } from "../services/ai.service.js";
+
 export const getUsersForSidebar = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
@@ -52,6 +55,7 @@ export const getMessages = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
 export const sendMessage = async (req, res) => {
   try {
     const { text, image, audio, audioDuration } = req.body;
@@ -100,6 +104,35 @@ export const sendMessage = async (req, res) => {
     if (senderSocketId) {
       io.to(senderSocketId).emit("newMessage", newMessage);
     }
+
+    /* ===================== 🤖 AI LOGIC (ADDED) ===================== */
+
+    const receiverUser = await User.findById(receiverId);
+
+    if (receiverUser?.isAI) {
+      // Send text + image + audio to AI
+      const aiReplyText = await generateAIResponse({
+        text,
+        image: imageUrl,
+        audio: audioUrl,
+      });
+
+      const aiMessage = new Message({
+        senderId: receiverId,   // AI is sender
+        receiverId: senderId,   // user is receiver
+        text: aiReplyText,
+      });
+
+      await aiMessage.save();
+
+      // Send AI reply to user in realtime
+      const userSocketId = getReceiverSocketId(senderId);
+      if (userSocketId) {
+        io.to(userSocketId).emit("newMessage", aiMessage);
+      }
+    }
+
+    /* ===================== 🤖 END AI LOGIC ===================== */
 
     res.status(201).json(newMessage);
   } catch (error) {

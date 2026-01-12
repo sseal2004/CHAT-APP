@@ -5,6 +5,7 @@ import { useAuthStore } from "./useAuthStore";
 
 export const useChatStore = create((set, get) => ({
   messages: [],
+  aiMessages: [], // ✅ AI messages stored separately
   users: [],
   selectedUser: null,
   isUsersLoading: false,
@@ -16,7 +17,7 @@ export const useChatStore = create((set, get) => ({
       const res = await axiosInstance.get("/messages/users");
       set({ users: res.data });
     } catch (error) {
-      toast.error(error.response.data.message||"Can't get the Users");
+      toast.error(error.response?.data?.message || "Can't get the Users");
     } finally {
       set({ isUsersLoading: false });
     }
@@ -25,10 +26,16 @@ export const useChatStore = create((set, get) => ({
   getMessages: async (userId) => {
     set({ isMessagesLoading: true });
     try {
+      if (userId === "ai-chatty") {
+        const res = await axiosInstance.get("/ai");
+        set({ aiMessages: res.data });
+        return;
+      }
+
       const res = await axiosInstance.get(`/messages/${userId}`);
       set({ messages: res.data });
     } catch (error) {
-      toast.error(error.response.data.message||"Can't get the messages");
+      toast.error(error.response?.data?.message || "Can't get the messages");
     } finally {
       set({ isMessagesLoading: false });
     }
@@ -36,6 +43,22 @@ export const useChatStore = create((set, get) => ({
 
   sendMessage: async (messageData) => {
     const { selectedUser, messages } = get();
+
+    // 🤖 AI CHAT (backend)
+    if (selectedUser?.isAI) {
+      try {
+        const res = await axiosInstance.post("/ai/send", messageData);
+        set((state) => ({
+          aiMessages: [...state.aiMessages, ...res.data],
+        }));
+        return;
+      } catch (error) {
+        toast.error(error.response?.data?.message || "Can't send the message");
+        return;
+      }
+    }
+
+    // 👤 NORMAL USER CHAT (backend)
     try {
       const res = await axiosInstance.post(
         `/messages/send/${selectedUser._id}`,
@@ -43,13 +66,13 @@ export const useChatStore = create((set, get) => ({
       );
       set({ messages: [...messages, res.data] });
     } catch (error) {
-      toast.error(error.response.data.message||"Can't send the message");
+      toast.error(error.response?.data?.message || "Can't send the message");
     }
   },
 
   subscribeToMessages: () => {
     const { selectedUser } = get();
-    if (!selectedUser) return;
+    if (!selectedUser || selectedUser.isAI) return;
 
     const socket = useAuthStore.getState().socket;
 
@@ -63,7 +86,7 @@ export const useChatStore = create((set, get) => ({
       });
     });
 
-    // ✅ Added logic — DO NOT CHANGE ANYTHING ELSE
+    // ✅ DO NOT TOUCH (as requested)
     socket.on("messagesSeen", () => {
       set((state) => ({
         messages: state.messages.map((msg) => ({
@@ -77,8 +100,21 @@ export const useChatStore = create((set, get) => ({
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
     socket.off("newMessage");
-    socket.off("messagesSeen"); // optional cleanup (safe)
+    socket.off("messagesSeen");
   },
 
-  setSelectedUser: (selectedUser) => set({ selectedUser }),
+  setSelectedUser: (selectedUser) => {
+    // Unsubscribe previous user first
+    get().unsubscribeFromMessages();
+
+    const aiMessages = selectedUser?.isAI ? [...get().aiMessages] : [];
+    set({
+      selectedUser,
+      messages: [],
+      aiMessages,
+    });
+
+    // Subscribe to messages for new user
+    if (!selectedUser?.isAI) get().subscribeToMessages();
+  },
 }));

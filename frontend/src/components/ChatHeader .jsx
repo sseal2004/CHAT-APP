@@ -13,7 +13,14 @@ const ChatHeader = () => {
           {/* Avatar */}
           <div className="avatar">
             <div className="size-10 rounded-full relative">
-              <img src={selectedUser.profilePic || "/avatar.png"} alt={selectedUser.fullName} />
+              <img
+                src={
+                  selectedUser.isAI
+                    ? "https://cdn-icons-png.flaticon.com/512/4712/4712109.png" // same PNG used in sidebar for AI
+                    : selectedUser.profilePic || "/frontend/public/avatar.png"
+                }
+                alt={selectedUser.fullName}
+              />
             </div>
           </div>
 
@@ -21,7 +28,11 @@ const ChatHeader = () => {
           <div>
             <h3 className="font-medium">{selectedUser.fullName}</h3>
             <p className="text-sm text-base-content/70">
-              {onlineUsers.includes(selectedUser._id) ? "Online" : "Offline"}
+              {selectedUser.isAI
+                ? "AI Assistant"
+                : onlineUsers.includes(selectedUser._id)
+                ? "Online"
+                : "Offline"}
             </p>
           </div>
         </div>
@@ -34,4 +45,5 @@ const ChatHeader = () => {
     </div>
   );
 };
+
 export default ChatHeader;
