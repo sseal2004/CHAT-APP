@@ -12,6 +12,9 @@ import messageRoutes from "./routes/message.route.js";
 import { app, server } from "./lib/socket.js";
 import aiRoutes from "./routes/ai.route.js";
 
+
+
+const PORT = process.env.PORT || 5001;
 const __dirname = path.resolve();
 
 /* -------------------- ALLOWED ORIGINS -------------------- */
@@ -26,13 +29,14 @@ const allowedOrigins = [
 ];
 
 /* -------------------- MIDDLEWARE -------------------- */
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ limit: "10mb", extended: true }));
+app.use(express.json({ limit: "10mb" })); // allow up to 10 MB JSON payloads
+app.use(express.urlencoded({ limit: "10mb", extended: true })); // for form data
 app.use(cookieParser());
 
 app.use(
   cors({
     origin: function (origin, callback) {
+      // Allow requests with no origin (Postman, mobile apps)
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) {
@@ -51,6 +55,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/ai", aiRoutes);
 
+
 /* -------------------- PRODUCTION -------------------- */
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
@@ -62,8 +67,8 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-/* -------------------- DB INIT (SERVERLESS SAFE) -------------------- */
-connectDB();
-
-/* -------------------- EXPORT FOR VERCEL -------------------- */
-export default app;
+/* -------------------- START SERVER -------------------- */
+server.listen(PORT, () => {
+  console.log(`✅ Server running on PORT: ${PORT}`);
+  connectDB();
+});
