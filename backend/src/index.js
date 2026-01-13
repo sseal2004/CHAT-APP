@@ -12,6 +12,8 @@ import messageRoutes from "./routes/message.route.js";
 import { app, server } from "./lib/socket.js";
 import aiRoutes from "./routes/ai.route.js";
 
+import path from "path";
+
 
 
 const PORT = process.env.PORT || 5001;
@@ -68,10 +70,10 @@ if (process.env.NODE_ENV === "production") {
 }
 
 /* -------------------- START SERVER -------------------- */
-if(process.env.NODE_ENV !=="production"){
+// if(process.env.NODE_ENV !=="production"){
 server.listen(PORT, () => {
   console.log(`✅ Server running on PORT: ${PORT}`);
   connectDB();
 });
-}
+// }
 export default server;
