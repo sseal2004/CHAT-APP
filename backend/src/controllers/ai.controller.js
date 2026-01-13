@@ -1,6 +1,6 @@
 import { AIMessage } from "../models/aiMessage.model.js";
 import cloudinary from "../lib/cloudinary.js";
-import { generateAIResponse } from "../services/ai.service.js";
+import { generateAIResponse, chatBotHandler } from "../services/ai.service.js"; // ✅ Added chatBotHandler
 
 /**
  * GET AI CHAT HISTORY
@@ -55,18 +55,29 @@ export const sendAIMessage = async (req, res) => {
       audio: audioUrl,
     });
 
-    // Generate AI response (USING EXISTING SERVICE)
+    // ✅ Weather logic: Use chatBotHandler first (OpenWeather + Gemini)
     let aiReply;
-    try {
-      aiReply = await generateAIResponse({
+    const lowerText = text?.toLowerCase().trim() || "";
+    
+    if (/\b(weather|temperature|forecast|rain|humidity|wind|sunrise|sunset|hot|cold|feels like)\b/i.test(lowerText)) {
+      aiReply = await chatBotHandler({
         text,
         image: imageUrl,
         audio: audioUrl,
       });
-    } catch (err) {
-      console.error("Gemini error:", err.message);
-      aiReply =
-        "🤖 Sorry, AI service is temporarily unavailable. Please try again.";
+    } else {
+      // Generate AI response (USING EXISTING SERVICE) - non-weather only
+      try {
+        aiReply = await generateAIResponse({
+          text,
+          image: imageUrl,
+          audio: audioUrl,
+        });
+      } catch (err) {
+        console.error("Gemini error:", err.message);
+        aiReply =
+          "🤖 Sorry, AI service is temporarily unavailable. Please try again.";
+      }
     }
 
     // Save AI message
