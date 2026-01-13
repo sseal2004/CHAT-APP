@@ -1,4 +1,4 @@
-# Real Time Chatting App
+# Real Time Chatting App With AI Assistant.
 <br>
 Real Time Chatting With AI
 <img width="1912" height="1032" alt="image" src="https://github.com/user-attachments/assets/6343dd2e-8c8c-4759-9bfe-fb7c2984ccfb" />
