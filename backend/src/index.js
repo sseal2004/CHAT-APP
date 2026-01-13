@@ -27,6 +27,8 @@ const allowedOrigins = [
   "http://localhost:5177",
   "http://127.0.0.1:5173",
   "http://localhost:3000",
+    "https://chat-app-x2ht.onrender.com", // ✅ ADD THIS
+
 ];
 
 /* -------------------- MIDDLEWARE -------------------- */
@@ -60,7 +62,7 @@ app.use("/api/ai", aiRoutes);
 /* -------------------- PRODUCTION -------------------- */
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
-  
+
 app.get(/.*/, (req, res) => {
   res.sendFile(
     path.join(__dirname, "../frontend", "dist", "index.html")
