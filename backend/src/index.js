@@ -12,7 +12,6 @@ import messageRoutes from "./routes/message.route.js";
 import { app, server } from "./lib/socket.js";
 import aiRoutes from "./routes/ai.route.js";
 
-import path from "path";
 
 
 
