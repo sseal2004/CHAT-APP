@@ -58,8 +58,12 @@ export const sendAIMessage = async (req, res) => {
     // ✅ Weather logic: Use chatBotHandler first (OpenWeather + Gemini)
     let aiReply;
     const lowerText = text?.toLowerCase().trim() || "";
-    
-    if (/\b(weather|temperature|forecast|rain|humidity|wind|sunrise|sunset|hot|cold|feels like)\b/i.test(lowerText)) {
+
+    if (
+      /\b(weather|temperature|forecast|rain|humidity|wind|sunrise|sunset|hot|cold|feels like)\b/i.test(
+        lowerText
+      )
+    ) {
       aiReply = await chatBotHandler({
         text,
         image: imageUrl,

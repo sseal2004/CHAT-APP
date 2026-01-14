@@ -11,6 +11,22 @@ const WEATHER_API_KEY = "cb6f6a9cc1bdc788480e783a5dac157e";
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
+ * ✅ NEW: Fetch image URL and convert to base64 for Gemini Vision
+ */
+const fetchImageAsBase64 = async (imageUrl) => {
+  try {
+    const response = await axios.get(imageUrl, {
+      responseType: "arraybuffer",
+    });
+
+    return Buffer.from(response.data).toString("base64");
+  } catch (error) {
+    console.error("❌ Failed to fetch image for AI:", error.message);
+    return null;
+  }
+};
+
+/**
  * Generate AI response using Gemini (with retry on overload)
  * Gemini is now used ONLY for non-weather queries
  */
@@ -22,17 +38,45 @@ export const generateAIResponse = async ({ text, image, audio }) => {
     return "🤖 AI configuration error.";
   }
 
-  let prompt = text || "";
+  let parts = [];
 
-  // ✅ ENHANCED: Handle image/audio properly for Gemini
-  if (image) prompt += `\n\n🖼️ User sent an image: ${image}`;
-  if (audio) prompt += `\n\n🎵 User sent a voice message: ${audio}`;
+  if (text) {
+    parts.push({ text });
+  }
+
+  // ✅ ADD IMAGE SUPPORT (Cloudinary → Base64 → Gemini)
+  if (image) {
+    const imageBase64 = await fetchImageAsBase64(image);
+
+    if (imageBase64) {
+      parts.push({
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: imageBase64,
+        },
+      });
+    }
+  }
+
+  // ⚠️ Audio is kept as context text only (Gemini limitation)
+  if (audio) {
+    parts.push({
+      text: "🎵 User also sent an audio message.",
+    });
+  }
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const result = await axios.post(
         apiUrl,
-        { contents: [{ parts: [{ text: prompt }] }] },
+        {
+          contents: [
+            {
+              role: "user",
+              parts,
+            },
+          ],
+        },
         { timeout: 15000 }
       );
 
@@ -67,9 +111,6 @@ export const generateAIResponse = async ({ text, image, audio }) => {
    ✅ WEATHER LOGIC - VOICE FRIENDLY
 ====================================================== */
 
-/**
- * Fetch coordinates for a city using OpenWeather Geo API
- */
 const getCoordinates = async (city) => {
   try {
     const res = await axios.get(
@@ -90,57 +131,73 @@ const getCoordinates = async (city) => {
   }
 };
 
-/**
- * Current weather - VOICE & TEXT FRIENDLY
- */
 export const getCurrentWeather = async (city) => {
   try {
     const coords = await getCoordinates(city);
-    if (!coords) return `🌍 Could not find location "${city}". Please try again with a valid city name.`;
+    if (!coords)
+      return `🌍 Could not find location "${city}". Please try again with a valid city name.`;
 
-    const res = await axios.get("https://api.openweathermap.org/data/2.5/weather", {
-      params: { lat: coords.lat, lon: coords.lon, units: "metric", appid: WEATHER_API_KEY },
-    });
+    const res = await axios.get(
+      "https://api.openweathermap.org/data/2.5/weather",
+      {
+        params: {
+          lat: coords.lat,
+          lon: coords.lon,
+          units: "metric",
+          appid: WEATHER_API_KEY,
+        },
+      }
+    );
 
     const d = res.data;
-    
-    // ✅ VOICE-FRIENDLY FORMAT (also works great for text)
-    const weatherText = `🌍 Weather in ${coords.name}, ${coords.country}.
-🕒 Updated: ${new Date(d.dt * 1000).toLocaleString('en-IN')}.
 
-🌡️ Temperature: ${Math.round(d.main.temp)}°C. Feels like ${Math.round(d.main.feels_like)}°C.
+    return `🌍 Weather in ${coords.name}, ${coords.country}.
+🕒 Updated: ${new Date(d.dt * 1000).toLocaleString("en-IN")}.
+
+🌡️ Temperature: ${Math.round(d.main.temp)}°C. Feels like ${Math.round(
+      d.main.feels_like
+    )}°C.
 🌤️ Condition: ${d.weather[0].description}.
 💧 Humidity: ${d.main.humidity}%.
 💨 Wind: ${d.wind.speed} meters per second.
 ☁️ Clouds: ${d.clouds.all}%.
-🌅 Sunrise: ${new Date(d.sys.sunrise * 1000).toLocaleTimeString('en-IN')}.
-🌇 Sunset: ${new Date(d.sys.sunset * 1000).toLocaleTimeString('en-IN')}.`;
-
-    return weatherText;
+🌅 Sunrise: ${new Date(d.sys.sunrise * 1000).toLocaleTimeString("en-IN")}.
+🌇 Sunset: ${new Date(d.sys.sunset * 1000).toLocaleTimeString("en-IN")}.`;
   } catch (err) {
     console.error("Current Weather Error:", err.message);
-    return "🌍 Sorry, could not fetch current weather data. Please check your connection and try again.";
+    return "🌍 Sorry, could not fetch current weather data.";
   }
 };
 
-/**
- * 5-day forecast - VOICE FRIENDLY (first 8 entries = 24hrs)
- */
 export const getWeatherForecast = async (city) => {
   try {
     const coords = await getCoordinates(city);
     if (!coords) return `🌍 Could not find location "${city}".`;
 
-    const res = await axios.get("https://api.openweathermap.org/data/2.5/forecast", {
-      params: { lat: coords.lat, lon: coords.lon, units: "metric", appid: WEATHER_API_KEY },
-    });
+    const res = await axios.get(
+      "https://api.openweathermap.org/data/2.5/forecast",
+      {
+        params: {
+          lat: coords.lat,
+          lon: coords.lon,
+          units: "metric",
+          appid: WEATHER_API_KEY,
+        },
+      }
+    );
 
-    const forecast = res.data.list.slice(0, 8); // First 24 hours (8x3hr)
+    const forecast = res.data.list.slice(0, 8);
     let message = `🌤 24-HOUR FORECAST for ${coords.name}, ${coords.country}\n\n`;
 
-    forecast.forEach((f, index) => {
-      const time = new Date(f.dt * 1000).toLocaleString('en-IN');
-      message += `📅 ${time} - Temp: ${Math.round(f.main.temp)}°C, feels like ${Math.round(f.main.feels_like)}°C. ${f.weather[0].description}. Humidity ${f.main.humidity}%, Wind ${f.wind.speed}m/s.\n`;
+    forecast.forEach((f) => {
+      const time = new Date(f.dt * 1000).toLocaleString("en-IN");
+      message += `📅 ${time} - Temp: ${Math.round(
+        f.main.temp
+      )}°C, feels like ${Math.round(
+        f.main.feels_like
+      )}°C. ${f.weather[0].description}. Humidity ${
+        f.main.humidity
+      }%, Wind ${f.wind.speed}m/s.\n`;
     });
 
     return message;
@@ -150,55 +207,35 @@ export const getWeatherForecast = async (city) => {
   }
 };
 
-/**
- * Main weather handler - VOICE UNDERSTANDING
- */
 export const handleWeatherRequest = async (text) => {
   const lowerText = text.toLowerCase().trim();
-  
-  // ✅ ENHANCED: Better voice recognition patterns
+
   const locationMatch =
-    lowerText.match(/in\s+([a-zA-Z\s,]+)(?:\s+(?:weather|today))/i) ||
-    lowerText.match(/at\s+([a-zA-Z\s,]+)(?:\s+(?:weather|today))/i) ||
-    lowerText.match(/^([a-zA-Z\s,]+)\s+(?:weather|today)/i) ||
+    lowerText.match(/in\s+([a-zA-Z\s,]+)/i) ||
+    lowerText.match(/at\s+([a-zA-Z\s,]+)/i) ||
+    lowerText.match(/^([a-zA-Z\s,]+)\s+weather/i) ||
     lowerText.match(/weather\s+(?:in|at|for)?\s*([a-zA-Z\s,]+)/i);
 
   if (!locationMatch) {
-    return "🌍 Please say 'weather in [city]' or '[city] weather' like 'kolkata weather' or 'weather in delhi'";
+    return "🌍 Please say 'weather in [city]' or '[city] weather'";
   }
 
   const location = locationMatch[1].trim();
 
-  // ✅ Voice-friendly forecast detection
-  if (/forecast|5\s*day|next\s*day|tomorrow|week/i.test(lowerText)) {
+  if (/forecast|tomorrow|next|week/i.test(lowerText)) {
     return await getWeatherForecast(location);
   }
 
   return await getCurrentWeather(location);
 };
 
-/* ======================================================
-   ✅ CHATBOT HANDLER - FULL MULTIMEDIA SUPPORT
-====================================================== */
 export const chatBotHandler = async ({ text, image, audio }) => {
-  let finalText = (text || "").toLowerCase().trim();
+  const weatherKeywords =
+    /\b(weather|temperature|forecast|rain|humidity|wind|sunrise|sunset|hot|cold|feels\s*like)\b/i;
 
-  // ✅ WEATHER KEYWORDS (voice-friendly)
-  const weatherKeywords = /\b(weather|temperature|forecast|rain|humidity|wind|sunrise|sunset|hot|cold|feels\s*like|°c|°f|degree|degrees)\b/i;
-  
-  if (weatherKeywords.test(finalText)) {
-    console.log("🌤️ WEATHER REQUEST DETECTED");
-    return await handleWeatherRequest(text || finalText);
+  if (weatherKeywords.test(text || "")) {
+    return await handleWeatherRequest(text);
   }
 
-  // ✅ NON-WEATHER → Full Gemini with image/audio context
-  console.log("🤖 GEMINI REQUEST");
-  return await generateAIResponse({ 
-    text: text || "", 
-    image: image || null, 
-    audio: audio || null 
-  });
+  return await generateAIResponse({ text, image, audio });
 };
-
-// ✅ EXPORT FOR CONTROLLER
-// Controller needs: chatBotHandler (main function)
