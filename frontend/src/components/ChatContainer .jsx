@@ -61,8 +61,8 @@ const ChatContainer = () => {
       lastMessageDate = messageDate;
 
       const isMyMessage = selectedUser?.isAI
-        ? message.role === "user" // AI chat logic
-        : message.senderId === authUser._id; // Normal chat logic
+        ? message.role === "user"
+        : message.senderId === authUser._id;
 
       return (
         <div key={message._id}>
@@ -82,7 +82,7 @@ const ChatContainer = () => {
                     isMyMessage
                       ? authUser.profilePic || "/avatar.png"
                       : selectedUser?.isAI
-                      ? "https://cdn-icons-png.flaticon.com/512/4712/4712109.png" // ✅ AI avatar applied here
+                      ? "https://cdn-icons-png.flaticon.com/512/4712/4712109.png"
                       : selectedUser.profilePic || "/avatar.png"
                   }
                   alt="profile"
@@ -95,7 +95,6 @@ const ChatContainer = () => {
                 {formatMessageTime(message.createdAt)}
               </time>
 
-              {/* ✅ TICKS ONLY FOR REAL USERS */}
               {!selectedUser?.isAI && isMyMessage && (
                 <span
                   className={`text-xs ${
@@ -120,17 +119,19 @@ const ChatContainer = () => {
               {message.audio && (
                 <>
                   {!failedAudio[message._id] ? (
-                    <audio
-                      controls
-                      src={message.audio}
-                      className="max-w-xs mb-2"
-                      onError={() =>
-                        setFailedAudio((prev) => ({
-                          ...prev,
-                          [message._id]: true,
-                        }))
-                      }
-                    />
+                    <div className="w-[240px] max-w-full mb-2">
+                      <audio
+                        controls
+                        src={message.audio}
+                        className="w-full"
+                        onError={() =>
+                          setFailedAudio((prev) => ({
+                            ...prev,
+                            [message._id]: true,
+                          }))
+                        }
+                      />
+                    </div>
                   ) : (
                     <p className="text-sm text-red-500 italic mb-2">
                       Failed to send voice message

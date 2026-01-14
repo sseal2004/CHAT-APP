@@ -9,6 +9,9 @@ const MessageInput = () => {
   const [audioPreview, setAudioPreview] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
 
+  // ✅ Speech-to-text (AI only)
+  const [voiceText, setVoiceText] = useState("");
+
   // ✅ Emoji states
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojis = ["😀", "😂", "😍", "😎", "👍", "🔥", "❤️", "🎉", "🙏", "😢"];
@@ -16,28 +19,24 @@ const MessageInput = () => {
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const recognitionRef = useRef(null);
 
-  // ✅ FIXED: removed setAITyping (it doesn't exist in store)
   const { sendMessage, selectedUser } = useChatStore();
 
   /* ---------------- IMAGE ---------------- */
   const handleImageChange = (e) => {
-  const file = e.target.files?.[0];
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  if (!file) return; // ✅ user cancelled file picker
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
 
-  if (!file.type.startsWith("image/")) {
-    toast.error("Please select an image file");
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onloadend = () => {
-    setImagePreview(reader.result);
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
   };
-  reader.readAsDataURL(file);
-};
-
 
   const removeImage = () => {
     setImagePreview(null);
@@ -60,21 +59,55 @@ const MessageInput = () => {
 
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
+      setVoiceText("");
+      setText("");
+
+      // 🤖 AI → LIVE SPEECH TO TEXT INTO INPUT BOX
+      if (selectedUser?.isAI) {
+        const SpeechRecognition =
+          window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+          toast.error("Speech recognition not supported");
+          return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = "en-US";
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onresult = (e) => {
+          let transcript = "";
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            transcript += e.results[i][0].transcript;
+          }
+
+          setVoiceText(transcript);
+          setText(transcript); // ✅ THIS IS THE KEY CHANGE
+        };
+
+        recognition.start();
+        recognitionRef.current = recognition;
+      }
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, {
-          type: "audio/webm",
-        });
-        const audioUrl = URL.createObjectURL(audioBlob);
+        // 👤 USER → STORE AUDIO
+        if (!selectedUser?.isAI) {
+          const audioBlob = new Blob(audioChunksRef.current, {
+            type: "audio/webm",
+          });
+          const audioUrl = URL.createObjectURL(audioBlob);
 
-        setAudioPreview({
-          blob: audioBlob,
-          url: audioUrl,
-        });
+          setAudioPreview({
+            blob: audioBlob,
+            url: audioUrl,
+          });
+        }
       };
 
       mediaRecorder.start();
@@ -87,6 +120,7 @@ const MessageInput = () => {
 
   const stopRecording = () => {
     mediaRecorderRef.current?.stop();
+    recognitionRef.current?.stop();
     setIsRecording(false);
   };
 
@@ -103,22 +137,32 @@ const MessageInput = () => {
   /* ---------------- SEND MESSAGE ---------------- */
   const handleSendMessage = async (e) => {
     e.preventDefault();
+
     if (!text.trim() && !imagePreview && !audioPreview) return;
 
     try {
-      let audioBase64 = null;
+      // 🤖 AI → SEND TEXT (VOICE OR TYPED)
+      if (selectedUser?.isAI) {
+        await sendMessage({
+          text: text.trim(),
+          image: imagePreview,
+        });
+      } else {
+        // 👤 USER → SEND AUDIO
+        let audioBase64 = null;
+        if (audioPreview?.blob) {
+          audioBase64 = await convertBlobToBase64(audioPreview.blob);
+        }
 
-      if (audioPreview?.blob) {
-        audioBase64 = await convertBlobToBase64(audioPreview.blob);
+        await sendMessage({
+          text: text.trim(),
+          image: imagePreview,
+          audio: audioBase64,
+        });
       }
 
-      await sendMessage({
-        text: text.trim(),
-        image: imagePreview,
-        audio: audioBase64,
-      });
-
       setText("");
+      setVoiceText("");
       setImagePreview(null);
       setAudioPreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -150,7 +194,7 @@ const MessageInput = () => {
         </div>
       )}
 
-      {/* AUDIO PREVIEW */}
+      {/* AUDIO PREVIEW (USER ONLY) */}
       {audioPreview && (
         <div className="mb-3 flex items-center gap-2">
           <audio controls src={audioPreview.url} className="w-64" />
