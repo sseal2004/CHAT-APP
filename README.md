@@ -1,14 +1,14 @@
-# Real Time Chatting App
+# Real Time Chatting App With AI Assistant.
 <br>
 Real Time Chatting With AI
-<img width="1914" height="909" alt="image" src="https://github.com/user-attachments/assets/883658ef-5009-4952-a776-279b9339d57d" />
+<img width="1912" height="1032" alt="image" src="https://github.com/user-attachments/assets/6343dd2e-8c8c-4759-9bfe-fb7c2984ccfb" />
 Login & SignUp page
-<img width="1915" height="906" alt="image" src="https://github.com/user-attachments/assets/8532fa88-8ec2-4d8d-8c6a-08c21caf7fbd" />
+<img width="1919" height="1028" alt="image" src="https://github.com/user-attachments/assets/514ea470-aace-4211-af49-ef16f29d5221" />
 Chatting Window
-<img width="1904" height="893" alt="image" src="https://github.com/user-attachments/assets/8ecaec43-1657-43b3-9144-5d21699800bd" />
+<img width="1919" height="973" alt="image" src="https://github.com/user-attachments/assets/0f93511b-6c54-497e-95ce-1f677de7d60d" />
 Profile
-<img width="1884" height="909" alt="image" src="https://github.com/user-attachments/assets/1954face-4a0d-4c87-a2a8-51cacae264da" />
+<img width="1918" height="1020" alt="image" src="https://github.com/user-attachments/assets/9c0317b3-53aa-4da4-bef1-e2d95fe0982a" />
 Themes
-<img width="1888" height="907" alt="image" src="https://github.com/user-attachments/assets/0dc270d6-8e97-4d3e-ad23-38757ed84cde" />
+<img width="1919" height="972" alt="image" src="https://github.com/user-attachments/assets/fcd574ad-424a-4bae-8d28-3ca66bb97366" />
 
 
